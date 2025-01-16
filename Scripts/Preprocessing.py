@@ -101,17 +101,26 @@ class MRIDataset:
         #!     mode = 'training'
         #!  else:
         #!     mode = 'testing'
+        
         self.transform = transform 
         
-        #* Define class names and create class-to-index mapping
+        #* Defining the classes and encoding them
         self.classes = ['glioma', 'meningioma', 'pituitary', 'notumour'] 
         self.class_to_index = {cls: idx for idx, cls in enumerate(self.classes)}
         #! for idx, cls in enumerate(self.classes):
-        #! class_to_idx[cls] = idx
+        #!      class_to_idx[cls] = idx
         
         #* Assigning each image to a class
-        self.samples = []
+        self.samples = []                       #? Empty list to be filled with data entries
         split_dir = self.root_dir / self.split  #? Creates Data/Raw/Testing or Data/Raw/Training
-        
+        for class_name in self.classes:
+            class_dir = split_dir / class_name  #? Creates Data/Raw/Testing/glioma for example
+            class_idx = self.class_to_index[class_name]  #? [ ] because this is dictionary indexing
+            
+            #* So far, we have got the class name and index of the current iterated folder
+            #* Now we iterate over each image of the current class
+            
+            for img_path in class_dir.glob('*.{png, jpg, jpeg}'):
+                self.samples.append((img_path, class_idx))
 
         
