@@ -79,7 +79,39 @@ def verify_folders(testing_path: str | Path, training_path: str | Path) -> str:
 
     # Prints: "Data/Raw/Testing"
     
+    
+#! Data set Class
+#* 1. Correctly label each image data point
+#* 2. Load each image from it's folder using Dataset Class
+#* 3. Configure proper error handling and annotations
+
+class MRIDataset:
+    def __init__(self, root_dir: str | Path, split: str, transform:torchvision.transforms.Compose):
+        """
+        Args:
+            data_dir (Path): Path to the directory where the data is located
+            split (str): takes either "train" or "test"
+            transform (callable, optional): Optional transform to be applied on a sample.
+        """
         
+        #* Storing the initialisation parameters
+        self.root_dir = Path(root_dir)
+        self.split = 'training' if split == 'train' else 'testing'
+        #! if split == 'train':
+        #!     mode = 'training'
+        #!  else:
+        #!     mode = 'testing'
+        self.transform = transform 
         
+        #* Define class names and create class-to-index mapping
+        self.classes = ['glioma', 'meningioma', 'pituitary', 'notumour'] 
+        self.class_to_index = {cls: idx for idx, cls in enumerate(self.classes)}
+        #! for idx, cls in enumerate(self.classes):
+        #! class_to_idx[cls] = idx
         
+        #* Assigning each image to a class
+        self.samples = []
+        split_dir = self.root_dir / self.split  #? Creates Data/Raw/Testing or Data/Raw/Training
+        
+
         
