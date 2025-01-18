@@ -3,6 +3,9 @@ import sys
 from pathlib import Path
 from PIL import Image
 from zipfile import ZipFile
+import torch
+from torch.utils.data import Dataset
+
 
 def unzip_file(zip_path: str | Path, extract_path: str | Path) -> None: 
     """
@@ -62,8 +65,8 @@ def verify_folders(testing_path: str | Path, training_path: str | Path) -> str:
     if testing_exists and training_exists:
         return True, "Both folders exist and are valid directories"
     
-    # Construct error message for missing folders
-    missing_folders = []    #Start by making an empty list
+    #* Construct error message for missing folders
+    missing_folders = []    
     
     if not testing_exists:
         missing_folders.append("testing")
@@ -72,22 +75,14 @@ def verify_folders(testing_path: str | Path, training_path: str | Path) -> str:
         missing_folders.append("training")
         
     error_message = f"Missing folders: {', '.join(missing_folders)}"   
-    #? The .join() method is being called on the string ', ' (a comma followed by a space).
-    #? This method takes an iterable (misssing_folders) and combines all its elements 
-    #?  into a single string with elements seprated by ", " from each other
-    return error_message
+    return error_message     #? returns: Missing folders testing, training 
 
-    # Prints: "Data/Raw/Testing"
-    
-    
-#! Data set Class
-#* 1. Correctly label each image data point
-#* 2. Load each image from it's folder using Dataset Class
-#* 3. Configure proper error handling and annotations
 
-class MRIDataset:
-    def __init__(self, root_dir: str | Path, split: str, transform:torchvision.transforms.Compose):
+class MRIDataset(Dataset):
+    def __init__(self, root_dir: str | Path, split: str, transform: None | torchvision.transforms.Compose):
         """
+        Initialises isntance attributes when a MRIDataset object is created.
+        
         Args:
             data_dir (Path): Path to the directory where the data is located
             split (str): takes either "train" or "test"
@@ -95,8 +90,11 @@ class MRIDataset:
         """
         
         #* Storing the initialisation parameters
+        
         self.root_dir = Path(root_dir)
+        
         self.split = 'training' if split == 'train' else 'testing'
+        #! Conditional statement equivalent to:
         #! if split == 'train':
         #!     mode = 'training'
         #!  else:
@@ -105,16 +103,19 @@ class MRIDataset:
         self.transform = transform 
         
         #* Defining the classes and encoding them
+        
         self.classes = ['glioma', 'meningioma', 'pituitary', 'notumour'] 
+        
         self.class_to_index = {cls: idx for idx, cls in enumerate(self.classes)}
         #! for idx, cls in enumerate(self.classes):
         #!      class_to_idx[cls] = idx
         
         #* Assigning each image to a class
-        self.samples = []                       #? Empty list to be filled with data entries
-        split_dir = self.root_dir / self.split  #? Creates Data/Raw/Testing or Data/Raw/Training
+        
+        self.samples = []                       
+        split_dir = self.root_dir / self.split      #? Creates Data/Raw/Testing or Data/Raw/Training
         for class_name in self.classes:
-            class_dir = split_dir / class_name  #? Creates Data/Raw/Testing/glioma for example
+            class_dir = split_dir / class_name      #? Creates Data/Raw/Testing/glioma for example
             class_idx = self.class_to_index[class_name]  #? [ ] because this is dictionary indexing
             
             #* So far, we have got the class name and index of the current iterated folder
@@ -122,5 +123,36 @@ class MRIDataset:
             
             for img_path in class_dir.glob('*.{png, jpg, jpeg}'):
                 self.samples.append((img_path, class_idx))
+                
+    def __getitem__(self, index):
+        """
+        A method used to retrieve and apply transformations to a data point given it's index.
+        
+        Returns:
+            tuple: (image, class_idx)
+
+        Args:
+            index (_type_): _description_
+        """
+        
+        img_path, class_idx = self.samples[index]
+        
+        image = Image.open(img_path)   #? The PIL library is compatible with Path() objects
+        
+        if self.transform is not None:
+            image = self.transform(image) 
+            #? Now it's a 224x224 PyTorch tensor, normalized and ready for the neural network
+
+        return image, class_idx
+    
+    def __len__(self):
+        """
+        Returns:
+            int: The number of samples in the dataset
+        """
+        return len(self.samples)
+        
+        
+        
 
         
