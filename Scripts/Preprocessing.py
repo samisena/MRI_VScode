@@ -5,6 +5,8 @@ from PIL import Image
 from zipfile import ZipFile
 import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
+
 
 
 def unzip_file(zip_path: str | Path, extract_path: str | Path) -> None: 
@@ -79,7 +81,7 @@ def verify_folders(testing_path: str | Path, training_path: str | Path) -> str:
 
 
 class MRIDataset(Dataset):
-    def __init__(self, root_dir: str | Path, split: str, transform: None | torchvision.transforms.Compose):
+    def __init__(self, root_dir: str | Path, split: str, transform: None | transforms.Compose = None):
         """
         Initialises isntance attributes when a MRIDataset object is created.
         
@@ -152,7 +154,27 @@ class MRIDataset(Dataset):
         """
         return len(self.samples)
         
-        
-        
 
+test_transforms = transforms.Compose([
+    transforms.Resize((224,224)), 
+    transforms.ToTensor(),
+    transforms.Normalize(             
+        mean = [0.485, 0.456, 0.406],   #* Image Net normalization
+        std = [0.229, 0.224, 0.225]    
+    )
+])
         
+train_transforms = transforms.Compose([
+    transforms.Resize((224,224)),
+    transforms.RandomRotation(10, fill=0),    #* 10 degrees - empty spaces are filled with black
+    transforms.ColorJitter(brightness=0.2, contrast=0.2),
+    transforms.RandomHorizontalFlip(0.5),     #* 50% chances of a mirro flip (left side becomes right side)
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean = [0.485, 0.456, 0.406],
+        std = [0.229, 0.224, 0.225]
+    )
+    
+])
+ 
+#! Potential errors: Make sure all files are images - and make sure all images are either RGB or L
