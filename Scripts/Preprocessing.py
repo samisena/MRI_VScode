@@ -25,7 +25,7 @@ def unzip_file(zip_path: str | Path, extract_path: str | Path) -> None:
      #? Convert the paths to Path objects to handle Windows paths properly
      #? This automatically handles backslashes and forward slashes appropriately  
      
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+    with ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(extract_path)
     #? The 'with' statement ensures that the ZIP file is properly closed 
     #? after we're done with it, even if an error occurs.
