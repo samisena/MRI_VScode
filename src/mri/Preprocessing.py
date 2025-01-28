@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import Image
 from zipfile import ZipFile
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import random_split, Dataset, DataLoader
 from torchvision import transforms
 
 
@@ -105,7 +105,7 @@ class MRIDataset(Dataset):
         if self.transform is not None:
             image = self.transform(image) 
 
-        return image, class_idx
+        return image, class_idx    #! This is necessary for DataLoader to work properly
     
     def __len__(self):
         """
@@ -113,10 +113,12 @@ class MRIDataset(Dataset):
             int: The number of samples in the dataset
         """
         return len(self.samples)
-        
+    
+
 
 test_transforms = transforms.Compose([
     transforms.Resize((224,224)), 
+    transforms.Grayscale(num_output_channels=3),  #* forces images to be RGB - compatibility with ResNet50
     transforms.ToTensor(),
     transforms.Normalize(             
         mean = [0.485, 0.456, 0.406],   #* Image Net normalization
@@ -126,6 +128,7 @@ test_transforms = transforms.Compose([
         
 train_transforms = transforms.Compose([
     transforms.Resize((224,224)),
+    transforms.Grayscale(num_output_channels=3),  # Convert to 3 identical channels
     transforms.RandomRotation(10, fill=0),    #* 10 degrees - empty spaces are filled with black
     transforms.ColorJitter(brightness=0.2, contrast=0.2),
     transforms.RandomHorizontalFlip(0.5),     #* 50% chances of a mirro flip (left side becomes right side)
@@ -138,13 +141,26 @@ train_transforms = transforms.Compose([
 ])
  
  
-testing_set_dir = Path.cwd().parent / "Data" / 'Raw' / "Testing"
-training_set_dir = Path.cwd().parent / "Data" / 'Raw' / "Training"
+testing_set_dir = Path.cwd().parent.parent / "Data" / 'Raw' / "Testing"
+training_set_dir = Path.cwd().parent.parent / "Data" / 'Raw' / "Training"
 
 train_dataset = MRIDataset(training_set_dir,  train_transforms)
-test_dataset = MRIDataset(testing_set_dir,  test_transforms )
+train_size = int(0.85 * len(train_dataset))
+val_size = len(train_dataset) - train_size
+
+train_dataset, val_dataset = random_split(
+    train_dataset,
+    [train_size, val_size],
+    generator=torch.Generator().manual_seed(42)
+)
 
 train_loader = DataLoader(train_dataset, batch_size=32,
-                          shuffle=True, num_workers=4)
+                        shuffle=True, num_workers=4)
+
+val_loader = DataLoader(val_dataset, batch_size=32,
+                        shuffle=False, num_workers=4)
+
+
+test_dataset = MRIDataset(testing_set_dir,  test_transforms )
 test_loader = DataLoader(test_dataset, batch_size=32,
-                         shuffle=True, num_workers=4)
+                         shuffle=False, num_workers=4)
