@@ -1,5 +1,6 @@
 import os
 import sys
+from config import Config       #* importing the config file
 from pathlib import Path
 from PIL import Image
 from zipfile import ZipFile
@@ -140,9 +141,10 @@ train_transforms = transforms.Compose([
     
 ])
  
- 
-testing_set_dir = Path.cwd().parent.parent / "Data" / 'Raw' / "Testing"
-training_set_dir = Path.cwd().parent.parent / "Data" / 'Raw' / "Training"
+
+
+testing_set_dir = Config.TESTING_DATA
+training_set_dir = Config.TRAINING_DATA
 
 train_dataset = MRIDataset(training_set_dir,  train_transforms)
 train_size = int(0.85 * len(train_dataset))

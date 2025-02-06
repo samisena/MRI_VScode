@@ -18,7 +18,7 @@ class Resnet50(nn.Module):
         
 
 
-def train_one_epoch(model, train_loader, criterion, optimizer, device) -> float:
+def train_epoch(model, train_loader, criterion, optimizer, device) -> float:
     """
     This function defines how one epoch is trained
     
@@ -26,7 +26,6 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device) -> float:
         model (torchvision.models | nn.Module): The model to train
         training_dataloader (torch.utils.data.DataLoader): the dataloader containing the training data
     """
-    
     model.train()        #? Putting the model in train mode
     running_loss = 0.0   #? Resets the running_loss for each new epoch
     
@@ -78,33 +77,120 @@ def validate_epoch(model, val_loader, criterion, device):
             
             
 if __name__ == "__main__":
-    
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #? One line conditional statement that sets device as the GPU if its available
-    
     model = Resnet50(num_classes=4)
-    
+    device = torch.device("cuda" if torch.cuda.is_available() == True else "cpu")
+    model.to(device)   
+     
     criterion = nn.CrossEntropyLoss()
     
     optimizer = Adam(model.parameters(), lr=0.001)
     
-    train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
+    train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
     print(f"The trainin loss is: {train_loss}")
     
     val_loss, val_prct = validate_epoch(model, val_loader, criterion,device )
     print(f"""The validation loss is {round(val_loss,2)}, 
           and the percentage of correctly classified instances is: {round(val_prct,2)}%""")
+
+
+
+
+def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
+    """
+    This function a given model for a specific number of epochs, and it includes
+    advanced techniques such as: 
+        * Early stopping: stopping the training after if the validation accuracy stops improving after
+                            a given number of epochs (patience)
+        * Learning rate scheduling: automatically adjust the learning rate during training
+        * Hyperparameter tuning: learning rate, layer freezing & unfreezing
+        * Incremental saving
+        
+    returns:
+        best_model_state: a dictionary that maps each layer's name to its parameter values
+        val_accuracy: the percentage of correctly classified instances
+    """
+    
+    #* Adam optimizer and Learning rate scheduling
+    optimizer = Adam(model.parameters(), lr=0.003)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,    #? where the learning rate to optimize is
+        mode='min',   #? minimizing the validation loss
+        factor = 0.1, #? multiply the learning rate by this factor when reducing
+        patience = 3, #? number of epochs to wait before reducing the learning rate
+        verbose = True, #? print statement when lr gets reduces
+        min_lr=1e-6   #? minimum learning rate value
+    )
+    
+    criterion = nn.CrossEntropyLoss()
+    
+    #? Metric that will keep track of the best model:
+    best_accuracy = 0   
+    #? Incremental saving
+    history = {
+        'train_loss':[],
+        'val_loss': [],
+        'val_accuracy': [],
+        'learning_rates': []
+    }        
+    
+    for epoch in range(epochs):
+        
+        train_loss = train_epoch(model, train_loader, criterion, optimizer)
+        
+        val_loss, val_accuracy = validate_epoch(model, val_loader, criterion )
+        
+        current_lr = optimizer.param_groups[0]['lr']  #?gets the current lr
+        
+        #! updates the lr if patience criteria is met:
+        scheduler.step(val_loss)    
+        
+        history['train_loss'].append(train_loss)
+        history['val_loss'].append(val_loss)
+        history['val_accuracy'].append(val_accuracy)
+        history['learning_rates'].append(current_lr)
+        
+        print(f"Epoch {epoch+1}/{epochs}:")
+        print(f'The current learning Rate: {current_lr:.6f}')
+        print(f"The training loss is: {train_loss:.4f}")
+        print(f"The validation loss is: {val_loss:.4f}")
+        print(f"The percentage of correctly classifed images during validation was: {val_prct:.2f}% ")
+        print('-' * 50)    #* Nice visual to seperate epochs
+        
+        #* We check if the current weights are the best so far, and if so we save them
+        if val_accuracy > best_accuracy:
+            best_accuracy = val_accuracy  #?we update the best accuracy
+            best_model_state = model.state_dict()   #?saves the current parameters in a dictionary
+            no_improvement_epochs = 0
+        else:
+            no_improvement_epochs += 1   
+            
+        #* Early stopping:
+        if no_improvement_epochs > patience:
+            print(f"Early stopping triggered after {epoch+1} epochs")
+            break
+            
+    return best_model_state, best_accuracy
+            
+
+
+if __name__ == "__main__":
+    model = Resnet50(num_classes = 4)
+    device = torch.device("cuda" if torch.cuda.is_available() == True else "cpu")
+    model.to(device)
+    train_model
+    
+    best_model_state, best_accuracy = train_model(model=model, epochs=10,
+                                                  train_loader = train_loader,
+                                                  val_loader=val_loader,
+                                                  device=device)
+    
+    print(f"End of model training. Final accuracy: {best_accuracy:.2f}%")
     
     
 
-#* Model = resnet50
-#* loss function = cross entropy (classification)
-#* optimizer = Adam 
-#* Other techniques: K-fold, learning rate scheduler, early stopping
+    
 
-#! Incremental saving 
-#! Training: validation split, GPU not CPU
-#! Evaluation metrics: confusion matrix, accuracy
-#! Computational cost metrics: time complexity
-
+        
+        
+        
 
