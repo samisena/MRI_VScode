@@ -18,7 +18,7 @@ class Resnet50(nn.Module):
     #* as long as we call it in the forward method
         
 
-def train_epoch(model, train_loader, criterion, optimizer, device) -> float:
+def train_epoch(model, train_loader, criterion, optimizer, device) -> tuple:
     """
     This function defines how one epoch is trained
     
@@ -28,6 +28,8 @@ def train_epoch(model, train_loader, criterion, optimizer, device) -> float:
     """
     model.train()        #? Putting the model in train mode
     running_loss = 0.0   #? Resets the running_loss for each new epoch
+    correct = 0
+    total = 0
     
     for features, labels in train_loader:
         
@@ -92,12 +94,12 @@ if __name__ == "__main__":
     train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
     print(f"The trainin loss is: {train_loss}")
     
-    val_loss, val_prct = validate_epoch(model, val_loader, criterion,device )
+    val_loss, val_prct = validate_epoch(model, val_loader, criterion , device)
     print(f"""The validation loss is {round(val_loss,2)}, 
           and the percentage of correctly classified instances is: {round(val_prct,2)}%""")
 
 
-def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
+def train_model(model, epochs, patience, train_loader, val_loader):
     """
     This function a given model for a specific number of epochs, and it includes
     advanced techniques such as: 
@@ -119,7 +121,6 @@ def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
         mode='min',   #? minimizing the validation loss
         factor = 0.1, #? multiply the learning rate by this factor when reducing
         patience = 3, #? number of epochs to wait before reducing the learning rate
-        verbose = True, #? print statement when lr gets reduces
         min_lr=1e-6   #? minimum learning rate value
     )
     
@@ -132,6 +133,7 @@ def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
     #? Incremental saving
     history = {
         'train_loss':[],
+        'train_accuracy':[],
         'val_loss': [],
         'val_accuracy': [],
         'learning_rates': []
@@ -141,9 +143,9 @@ def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
     progress_bar = tqdm(range(epochs), desc='Training')
     for epoch in progress_bar:
         
-        train_loss, train_accuracy = train_epoch(model, train_loader, criterion, optimizer)
-        
-        val_loss, val_accuracy = validate_epoch(model, val_loader, criterion )
+        train_loss, train_accuracy = train_epoch(model, train_loader, criterion, optimizer, device)
+
+        val_loss, val_accuracy = validate_epoch(model, val_loader, criterion, device )
         
         current_lr = optimizer.param_groups[0]['lr']  #?gets the current lr
         
@@ -187,13 +189,11 @@ def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
 if __name__ == "__main__":
     model = Resnet50(num_classes = 4)
     device = torch.device("cuda" if torch.cuda.is_available() == True else "cpu")
-    model.to(device)
-    train_model
-    
-    best_model_state, best_accuracy = train_model(model=model, epochs=10,
+    model.to(device)    
+    best_model_state, best_accuracy = train_model(model=model, epochs=1, patience=1,
                                                   train_loader = train_loader,
-                                                  val_loader=val_loader,
-                                                  device=device)
+                                                  val_loader=val_loader
+                                                  )
     
     print(f"End of model training. Final accuracy: {best_accuracy:.2f}%")
     
