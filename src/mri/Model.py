@@ -3,6 +3,7 @@ import torch.nn as nn
 import torchvision
 import torchvision.models as models
 from torch.optim import Adam
+from tqdm import tqdm
 
 class Resnet50(nn.Module):
     def __init__(self, num_classes):
@@ -16,7 +17,6 @@ class Resnet50(nn.Module):
     #* Note: it doesn't matter what how we define the instance attribute for the architecture
     #* as long as we call it in the forward method
         
-
 
 def train_epoch(model, train_loader, criterion, optimizer, device) -> float:
     """
@@ -44,13 +44,18 @@ def train_epoch(model, train_loader, criterion, optimizer, device) -> float:
         optimizer.step()
         
         running_loss += loss.item()
-    
-    return running_loss/len(train_loader)   #! len(train_dataloader) returns the number of batches not the 
-                                                #! number of samples in the dataset
+        
+        _, predicted = torch.max(predictions, 1)
+        
+        correct += (predicted==labels).sum().item()  #? counts the number of correct predictions
+             
+        total += labels.size(0)     #? returns the number of samples in each batch
+               
+    return running_loss/len(train_loader), (correct/total)*100   #! len(train_dataloader) returns the number
+                                                        #! of batches not the number of samples in the dataset
         
         
-        
-def validate_epoch(model, val_loader, criterion, device):
+def validate_epoch(model, val_loader, criterion, device) -> tuple:
     model.eval()    #? de-activates special layers like dropout
     val_loss = 0
     correct = 0
@@ -75,7 +80,6 @@ def validate_epoch(model, val_loader, criterion, device):
     return val_loss/len(val_loader), (correct/total)*100
             
             
-            
 if __name__ == "__main__":
     model = Resnet50(num_classes=4)
     device = torch.device("cuda" if torch.cuda.is_available() == True else "cpu")
@@ -91,8 +95,6 @@ if __name__ == "__main__":
     val_loss, val_prct = validate_epoch(model, val_loader, criterion,device )
     print(f"""The validation loss is {round(val_loss,2)}, 
           and the percentage of correctly classified instances is: {round(val_prct,2)}%""")
-
-
 
 
 def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
@@ -125,6 +127,8 @@ def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
     
     #? Metric that will keep track of the best model:
     best_accuracy = 0   
+    
+    
     #? Incremental saving
     history = {
         'train_loss':[],
@@ -133,30 +137,36 @@ def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
         'learning_rates': []
     }        
     
-    for epoch in range(epochs):
+    #* Iterates over the number of epochs using tqdm progress bar:
+    progress_bar = tqdm(range(epochs), desc='Training')
+    for epoch in progress_bar:
         
-        train_loss = train_epoch(model, train_loader, criterion, optimizer)
+        train_loss, train_accuracy = train_epoch(model, train_loader, criterion, optimizer)
         
         val_loss, val_accuracy = validate_epoch(model, val_loader, criterion )
         
         current_lr = optimizer.param_groups[0]['lr']  #?gets the current lr
         
         #! updates the lr if patience criteria is met:
-        scheduler.step(val_loss)    
+        scheduler.step(val_loss)    #? direclty modifies the learning rate of optimizer
         
         history['train_loss'].append(train_loss)
+        history['train_accuracy'].append(train_accuracy)
         history['val_loss'].append(val_loss)
         history['val_accuracy'].append(val_accuracy)
         history['learning_rates'].append(current_lr)
         
-        print(f"Epoch {epoch+1}/{epochs}:")
-        print(f'The current learning Rate: {current_lr:.6f}')
-        print(f"The training loss is: {train_loss:.4f}")
-        print(f"The validation loss is: {val_loss:.4f}")
-        print(f"The percentage of correctly classifed images during validation was: {val_prct:.2f}% ")
-        print('-' * 50)    #* Nice visual to seperate epochs
+        #* A progress bar instead of print statements:
+        progress_bar.set_postfix({
+            'train_loss': f'{train_loss:.4f}'
+            'train_accuracy': f'{train_accuracy:.2f}'
+            'val_loss': f'{val_loss:.4f}'
+            'val_accuracy': f'{val_accuracy:.2f}'
+            'learning_rate': f'{current_lr:.6f}'
+        })
+    
         
-        #* We check if the current weights are the best so far, and if so we save them
+        #* We check if the current weights are the best so far, and if so we save them:
         if val_accuracy > best_accuracy:
             best_accuracy = val_accuracy  #?we update the best accuracy
             best_model_state = model.state_dict()   #?saves the current parameters in a dictionary
@@ -168,10 +178,11 @@ def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
         if no_improvement_epochs > patience:
             print(f"Early stopping triggered after {epoch+1} epochs")
             break
+        
+    progress_bar.close()
             
     return best_model_state, best_accuracy
             
-
 
 if __name__ == "__main__":
     model = Resnet50(num_classes = 4)
