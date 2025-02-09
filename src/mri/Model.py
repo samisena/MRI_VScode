@@ -158,10 +158,10 @@ def train_model(model, epochs, patience, train_loader, val_loader) -> tuple:
         
         #* A progress bar instead of print statements:
         progress_bar.set_postfix({
-            'train_loss': f'{train_loss:.4f}'
-            'train_accuracy': f'{train_accuracy:.2f}'
-            'val_loss': f'{val_loss:.4f}'
-            'val_accuracy': f'{val_accuracy:.2f}'
+            'train_loss': f'{train_loss:.4f}',
+            'train_accuracy': f'{train_accuracy:.2f}',
+            'val_loss': f'{val_loss:.4f}',
+            'val_accuracy': f'{val_accuracy:.2f}',
             'learning_rate': f'{current_lr:.6f}'
         })
     
