@@ -33,7 +33,6 @@ def unzip_file(zip_path: str | Path, extract_path: str | Path) -> None:
     #? zipfile.ZipFile() opens the ZIP file. The 'r' parameter means we're 
     #? opening it in read mode.
 
-
 class MRIDataset(Dataset):
     def __init__(self, dataset_dir: str | Path, transform: None | transforms.Compose = None):
         """
@@ -116,7 +115,6 @@ class MRIDataset(Dataset):
         return len(self.samples)
     
 
-
 test_transforms = transforms.Compose([
     transforms.Resize((224,224)), 
     transforms.Grayscale(num_output_channels=3),  #* forces images to be RGB - compatibility with ResNet50
@@ -142,7 +140,6 @@ train_transforms = transforms.Compose([
 ])
  
 
-
 testing_set_dir = Config.TESTING_DATA
 training_set_dir = Config.TRAINING_DATA
 
@@ -161,7 +158,6 @@ train_loader = DataLoader(train_dataset, batch_size=32,
 
 val_loader = DataLoader(val_dataset, batch_size=32,
                         shuffle=False, num_workers=4)
-
 
 test_dataset = MRIDataset(testing_set_dir,  test_transforms )
 test_loader = DataLoader(test_dataset, batch_size=32,

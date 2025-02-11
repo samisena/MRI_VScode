@@ -17,6 +17,15 @@ class Resnet50(nn.Module):
     #* Note: it doesn't matter what how we define the instance attribute for the architecture
     #* as long as we call it in the forward method
         
+class EfficientNetB0(nn.Module):
+    def __init__(self, num_classes):
+        super().__init__()
+        self.efficientnet = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
+        self.efficientnet.classifier = nn.Linear(1280, num_classes)
+    
+    def forward(self,x):
+        return self.efficientnet(x)
+
 
 def train_epoch(model, train_loader, criterion, optimizer, device) -> tuple:
     """
@@ -80,26 +89,14 @@ def validate_epoch(model, val_loader, criterion, device) -> tuple:
             total += labels.size(0)     #? returns the number of samples in each batch
             
     return val_loss/len(val_loader), (correct/total)*100
-            
-            
-if __name__ == "__main__":
-    model = Resnet50(num_classes=4)
-    device = torch.device("cuda" if torch.cuda.is_available() == True else "cpu")
-    model.to(device)   
-     
-    criterion = nn.CrossEntropyLoss()
-    
-    optimizer = Adam(model.parameters(), lr=0.001)
-    
-    train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
-    print(f"The trainin loss is: {train_loss}")
-    
-    val_loss, val_prct = validate_epoch(model, val_loader, criterion , device)
-    print(f"""The validation loss is {round(val_loss,2)}, 
-          and the percentage of correctly classified instances is: {round(val_prct,2)}%""")
+        
+#! Let's add checkpoints
+#! training metric visualisations
+#! and a load trained model function
 
 
-def train_model(model, epochs, patience, train_loader, val_loader):
+def train_model(model, epochs: int, patience: int, train_loader, val_loader, save_path: Path):
+    
     """
     This function a given model for a specific number of epochs, and it includes
     advanced techniques such as: 
@@ -172,6 +169,8 @@ def train_model(model, epochs, patience, train_loader, val_loader):
         if val_accuracy > best_accuracy:
             best_accuracy = val_accuracy  #?we update the best accuracy
             best_model_state = model.state_dict()   #?saves the current parameters in a dictionary
+            torch.save(best_model_state, save_path) #! Saves the best model weights to 
+                                                    #! a file
             no_improvement_epochs = 0
         else:
             no_improvement_epochs += 1   
@@ -185,23 +184,36 @@ def train_model(model, epochs, patience, train_loader, val_loader):
             
     return best_model_state, best_accuracy
             
-
-if __name__ == "__main__":
-    model = Resnet50(num_classes = 4)
-    device = torch.device("cuda" if torch.cuda.is_available() == True else "cpu")
-    model.to(device)    
-    best_model_state, best_accuracy = train_model(model=model, epochs=1, patience=1,
-                                                  train_loader = train_loader,
-                                                  val_loader=val_loader
-                                                  )
+            
+def get_save_path(model):
     
-    print(f"End of model training. Final accuracy: {best_accuracy:.2f}%")
+    """_
+    Creates a directory where the model parameter weights can be saved
+
+    Returns:
+        Path object of the directory
+    """
     
+    model_path = Path(model.__class__.__name__)
+    
+    current_dir = Path(__file__)  #* will output: c:/Users/samis/OneDrive/Bureau/MRI_VScode/src/mri
+    
+    project_root = current_dir.parent.parent  #* c:/Users/samis/OneDrive/Bureau/MRI_VScode
+    
+    save_dir = project_root / 'Trained_models'
+    
+    save_dir.mkdir(parents = True, exist_ok=True)  #* Creates a new directory if doesn't already exist
+    
+    return save_dir /f"{model_path}.pth"  
+    #? c:/Users/samis/OneDrive/Bureau/MRI_VScode/Trained_model/Resnet50.pth
     
 
-    
-
-        
-        
-        
-
+if __name__ == '__main__':
+    model = Resnet50(4)
+    save_path = get_save_path(model)
+    best_model_state, best_accuracy = train_model(model=model, epochs =30, patience=5,
+                                                  train_loader=train_loader, 
+                                                  val_loader=val_loader, 
+                                                  save_path=save_path)
+    print(f"Training completed! Best validation accuracy: {best_accuracy:.2f}%")
+    print(f"Model weights saved at: {save_path}")
