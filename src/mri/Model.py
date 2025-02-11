@@ -35,6 +35,7 @@ def train_epoch(model, train_loader, criterion, optimizer, device) -> tuple:
         model (torchvision.models | nn.Module): The model to train
         training_dataloader (torch.utils.data.DataLoader): the dataloader containing the training data
     """
+    model = model.to(device)
     model.train()        #? Putting the model in train mode
     running_loss = 0.0   #? Resets the running_loss for each new epoch
     correct = 0
@@ -67,6 +68,7 @@ def train_epoch(model, train_loader, criterion, optimizer, device) -> tuple:
         
         
 def validate_epoch(model, val_loader, criterion, device) -> tuple:
+    model = model.to(device)
     model.eval()    #? de-activates special layers like dropout
     val_loss = 0
     correct = 0
@@ -111,6 +113,7 @@ def train_model(model, epochs: int, patience: int, train_loader, val_loader, sav
         val_accuracy: the percentage of correctly classified instances
     """
     
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     #* Adam optimizer and Learning rate scheduling
     optimizer = Adam(model.parameters(), lr=0.003)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -196,9 +199,9 @@ def get_save_path(model):
     
     model_path = Path(model.__class__.__name__)
     
-    current_dir = Path(__file__)  #* will output: c:/Users/samis/OneDrive/Bureau/MRI_VScode/src/mri
+    current_dir = Path(__file__)  #* will output: c:/Users/samis/OneDrive/Bureau/MRI_VScode/src/mri/Models.py
     
-    project_root = current_dir.parent.parent  #* c:/Users/samis/OneDrive/Bureau/MRI_VScode
+    project_root = current_dir.parent.parent.parent  #* c:/Users/samis/OneDrive/Bureau/MRI_VScode
     
     save_dir = project_root / 'Trained_models'
     
@@ -208,12 +211,3 @@ def get_save_path(model):
     #? c:/Users/samis/OneDrive/Bureau/MRI_VScode/Trained_model/Resnet50.pth
     
 
-if __name__ == '__main__':
-    model = Resnet50(4)
-    save_path = get_save_path(model)
-    best_model_state, best_accuracy = train_model(model=model, epochs =30, patience=5,
-                                                  train_loader=train_loader, 
-                                                  val_loader=val_loader, 
-                                                  save_path=save_path)
-    print(f"Training completed! Best validation accuracy: {best_accuracy:.2f}%")
-    print(f"Model weights saved at: {save_path}")
