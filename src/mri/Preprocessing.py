@@ -141,10 +141,15 @@ train_transforms = transforms.Compose([
  
 
 testing_set_dir = Config.TESTING_DATA
+
 training_set_dir = Config.TRAINING_DATA
 
-train_dataset = MRIDataset(training_set_dir,  train_transforms)
+train_dataset = MRIDataset(training_set_dir,  train_transforms)  #! Note that training transforms are applied
+                                                                #! to the training set whereas validation transforms
+                                                                #! should be applied instead
+
 train_size = int(0.85 * len(train_dataset))
+
 val_size = len(train_dataset) - train_size
 
 train_dataset, val_dataset = random_split(
