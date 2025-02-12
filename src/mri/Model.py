@@ -35,7 +35,6 @@ def train_epoch(model, train_loader, criterion, optimizer, device) -> tuple:
         model (torchvision.models | nn.Module): The model to train
         training_dataloader (torch.utils.data.DataLoader): the dataloader containing the training data
     """
-    model = model.to(device)
     model.train()        #? Putting the model in train mode
     running_loss = 0.0   #? Resets the running_loss for each new epoch
     correct = 0
@@ -68,7 +67,6 @@ def train_epoch(model, train_loader, criterion, optimizer, device) -> tuple:
         
         
 def validate_epoch(model, val_loader, criterion, device) -> tuple:
-    model = model.to(device)
     model.eval()    #? de-activates special layers like dropout
     val_loss = 0
     correct = 0
@@ -96,105 +94,55 @@ def validate_epoch(model, val_loader, criterion, device) -> tuple:
 #! training metric visualisations
 #! and a load trained model function
 
-
-def train_model(model, epochs: int, patience: int, train_loader, val_loader, save_path: Path):
+def load_checkpoint(checkpoint_path: Path, model, optimizer, scheduler, device):
     
     """
-    This function a given model for a specific number of epochs, and it includes
-    advanced techniques such as: 
-        * Early stopping: stopping the training after if the validation accuracy stops improving after
-                            a given number of epochs (patience)
-        * Learning rate scheduling: automatically adjust the learning rate during training
-        * Hyperparameter tuning: learning rate, layer freezing & unfreezing
-        * Incremental saving
-        
-    returns:
-        best_model_state: a dictionary that maps each layer's name to its parameter values
-        val_accuracy: the percentage of correctly classified instances
+    This function looks for a model training checkpoint file.
+
+    Returns:
+        start_epoch: the epoch that training should begin with 0 if no checkpoints were found
+                    otherwise current epoch + 1
+        best_accuracy: the best recoreded accuracy so far
+        no_improvement_epochs = the number of consecutive epochs where the training accuracy hasn't increased
+        history: a dictionary containing the savec history of the current training process
     """
     
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    #* Adam optimizer and Learning rate scheduling
-    optimizer = Adam(model.parameters(), lr=0.003)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,    #? where the learning rate to optimize is
-        mode='min',   #? minimizing the validation loss
-        factor = 0.1, #? multiply the learning rate by this factor when reducing
-        patience = 3, #? number of epochs to wait before reducing the learning rate
-        min_lr=1e-6   #? minimum learning rate value
-    )
-    
-    criterion = nn.CrossEntropyLoss()
-    
-    #? Metric that will keep track of the best model:
-    best_accuracy = 0   
-    
-    
-    #? Incremental saving
-    history = {
-        'train_loss':[],
-        'train_accuracy':[],
-        'val_loss': [],
-        'val_accuracy': [],
-        'learning_rates': []
-    }        
-    
-    #* Iterates over the number of epochs using tqdm progress bar:
-    progress_bar = tqdm(range(epochs), desc='Training')
-    for epoch in progress_bar:
+    if checkpoint_path.exists():                                 #?  Path method
+        print(f'Loading checkpoint from {checkpoint_path}')
+        checkpoint = torch.load(checkpoint_path, map_location=device)  #? to avoid errors if usisng a cpu
         
-        train_loss, train_accuracy = train_epoch(model, train_loader, criterion, optimizer, device)
+        model.load_state_dict(checkpoint['model_state'])  #! loads the tensor that maps neurons to their weights
+                                                        #! we use load_state_dict() fot tensor dict that were
+                                                        #! saved using torch.save()
+        
+        optimizer.load_state_dict(checkpoint['optimizer_state'])
+        
+        scheduler.load_state_dict(checkpoint['scheduler_state'])
+        
+        start_epoch = checkpoint['epoch']+1  #* The new starting epoch
+        best_accuracy = checkpoint['best_accuracy']
+        no_improvement_epochs = checkpoint['no_improvement_epochs']
+        history =  checkpoint['history']
+        
+        print(f'Resuming training from epoch {start_epoch} with best accuracy {best_accuracy}')
+        return start_epoch, best_accuracy, no_improvement_epochs, history
+    
+    else:
+        print('No checkpoint was found, starting training from epoch 0.')
+        return 0, 0, 0,  {
+            'train_loss': [], 'train_accuracy': [],
+            'val_loss': [], 'val_accuracy': [],
+            'learning_rates': []
+        }
 
-        val_loss, val_accuracy = validate_epoch(model, val_loader, criterion, device )
         
-        current_lr = optimizer.param_groups[0]['lr']  #?gets the current lr
-        
-        #! updates the lr if patience criteria is met:
-        scheduler.step(val_loss)    #? direclty modifies the learning rate of optimizer
-        
-        history['train_loss'].append(train_loss)
-        history['train_accuracy'].append(train_accuracy)
-        history['val_loss'].append(val_loss)
-        history['val_accuracy'].append(val_accuracy)
-        history['learning_rates'].append(current_lr)
-        
-        #* A progress bar instead of print statements:
-        progress_bar.set_postfix({
-            'train_loss': f'{train_loss:.4f}',
-            'train_accuracy': f'{train_accuracy:.2f}',
-            'val_loss': f'{val_loss:.4f}',
-            'val_accuracy': f'{val_accuracy:.2f}',
-            'learning_rate': f'{current_lr:.6f}'
-        })
-    
-        
-        #* We check if the current weights are the best so far, and if so we save them:
-        if val_accuracy > best_accuracy:
-            best_accuracy = val_accuracy  #?we update the best accuracy
-            best_model_state = model.state_dict()   #?saves the current parameters in a dictionary
-            torch.save(best_model_state, save_path) #! Saves the best model weights to 
-                                                    #! a file
-            no_improvement_epochs = 0
-        else:
-            no_improvement_epochs += 1   
-            
-        #* Early stopping:
-        if no_improvement_epochs > patience:
-            print(f"Early stopping triggered after {epoch+1} epochs")
-            break
-        
-    progress_bar.close()
-            
-    return best_model_state, best_accuracy
-            
-            
 def get_save_path(model):
     
     """_
     Creates a directory where the model parameter weights can be saved
 
     Returns:
-        Path object of the directory
+        save_path: Path object of the directory where to save the model
     """
     
     model_path = Path(model.__class__.__name__)
@@ -207,7 +155,127 @@ def get_save_path(model):
     
     save_dir.mkdir(parents = True, exist_ok=True)  #* Creates a new directory if doesn't already exist
     
-    return save_dir /f"{model_path}.pth"  
+    save_path = save_dir /f"{model_path}.pth" 
+    
+    return save_path
     #? c:/Users/samis/OneDrive/Bureau/MRI_VScode/Trained_model/Resnet50.pth
+    
+
+def train_model(model, epochs: int, patience: int, train_loader, val_loader, save_path: Path, 
+                checkpoint_freq=5, resume_from_checkpoint: bool = False):
+    """
+    This function trains a given model for a specific number of epochs, and it includes
+    advanced techniques such as: 
+        * Early stopping: stopping the training after if the validation accuracy stops improving after
+                            a given number of epochs (patience)
+        * Learning rate scheduling: automatically adjust the learning rate during training
+        * Hyperparameter tuning: learning rate, layer freezing & unfreezing
+        * Incremental saving
+        
+    Returns:
+        best_model_state: a dictionary that maps each layer's name to its parameter values
+        val_accuracy: the percentage of correctly classified instances
+    """
+    
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model.to(device)
+    # Add model name as prefix for better organization
+    checkpoint_path = save_path.parent / f"{model.__class__.__name__}_checkpoint.pt"
+
+    # Initialize optimizer and scheduler
+    optimizer = Adam(model.parameters(), lr=0.003)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,    
+        mode='min',   
+        factor=0.1,   
+        patience=3,   
+        min_lr=1e-6   
+    )
+    
+    criterion = nn.CrossEntropyLoss()
+    
+    # Fixed typo in 'exists()' method
+    if resume_from_checkpoint and checkpoint_path.exists():    
+        start_epoch, best_accuracy, no_improvement_epochs, history = load_checkpoint(
+            checkpoint_path, model, optimizer, scheduler, device)  # Fixed typo in 'map_location'
+    else:
+        start_epoch = 0                
+        best_accuracy = 0
+        no_improvement_epochs = 0
+        history = {                                    
+            'train_loss': [], 'train_accuracy': [],
+            'val_loss': [], 'val_accuracy': [],
+            'learning_rates': []
+        }   
+    
+    progress_bar = tqdm(range(start_epoch, epochs), desc='Training')
+    try:  # Added try block for proper exception handling
+        for epoch in progress_bar:
+            train_loss, train_accuracy = train_epoch(model, train_loader, criterion, optimizer, device)
+            val_loss, val_accuracy = validate_epoch(model, val_loader, criterion, device)
+            
+            current_lr = optimizer.param_groups[0]['lr']
+            scheduler.step(val_loss)
+            
+            # Update training history - fixed typo in 'history'
+            history['train_loss'].append(train_loss)
+            history['train_accuracy'].append(train_accuracy)
+            history['val_loss'].append(val_loss)
+            history['val_accuracy'].append(val_accuracy)
+            history['learning_rates'].append(current_lr)
+            
+            progress_bar.set_postfix({
+                'train_loss': f'{train_loss:.4f}',
+                'train_accuracy': f'{train_accuracy:.2f}',
+                'val_loss': f'{val_loss:.4f}',
+                'val_accuracy': f'{val_accuracy:.2f}',
+                'learning_rate': f'{current_lr:.6f}'
+            })
+        
+            if val_accuracy > best_accuracy:
+                best_accuracy = val_accuracy
+                best_model_state = model.state_dict()
+                torch.save(best_model_state, save_path)
+                no_improvement_epochs = 0
+            else:
+                no_improvement_epochs += 1   
+                
+            if no_improvement_epochs > patience:
+                print(f"Early stopping triggered after {epoch+1} epochs")
+                break
+            
+            if (epoch + 1) % checkpoint_freq == 0:
+                checkpoint = {
+                    'epoch': epoch,
+                    'model_state': model.state_dict(),
+                    'optimizer_state': optimizer.state_dict(),
+                    'scheduler_state': scheduler.state_dict(),
+                    'best_accuracy': best_accuracy,
+                    'no_improvement_epochs': no_improvement_epochs,
+                    'history': history
+                }
+                torch.save(checkpoint, checkpoint_path)
+                print(f"\nCheckpoint saved at epoch {epoch+1}")
+                
+    except KeyboardInterrupt:
+        print("\nTraining interrupted! Saving checkpoint...")
+        checkpoint = {
+            'epoch': epoch,
+            'model_state': model.state_dict(),
+            'optimizer_state': optimizer.state_dict(),
+            'scheduler_state': scheduler.state_dict(),
+            'best_accuracy': best_accuracy,
+            'no_improvement_epochs': no_improvement_epochs,
+            'history': history
+        }
+        torch.save(checkpoint, checkpoint_path)
+        print(f"Checkpoint saved at epoch {epoch + 1}")
+        
+    progress_bar.close()
+            
+    return best_model_state, best_accuracy
+            
+            
+
     
 
