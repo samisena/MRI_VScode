@@ -4,6 +4,9 @@ import torchvision
 import torchvision.models as models
 from torch.optim import Adam
 from tqdm import tqdm
+import matplotlib.pyplot as plt 
+import mlflow
+import mlflow.pytorch  #? MLflow's doesn't automatically import all submodules 
 
 class Resnet50(nn.Module):
     def __init__(self, num_classes):
@@ -136,7 +139,7 @@ def load_checkpoint(checkpoint_path: Path, model, optimizer, scheduler, device):
         }
 
         
-def get_save_path(model):
+def get_save_path(model) -> Path:
     
     """_
     Creates a directory where the model parameter weights can be saved
@@ -161,16 +164,39 @@ def get_save_path(model):
     #? c:/Users/samis/OneDrive/Bureau/MRI_VScode/Trained_model/Resnet50.pth
     
 
-def train_model(model, epochs: int, patience: int, train_loader, val_loader, save_path: Path, 
-                checkpoint_freq=5, resume_from_checkpoint: bool = False):
+def plot_training_history(history: dict):
     """
-    This function trains a given model for a specific number of epochs, and it includes
+    This function plots the training and validation accuracies accross the epochs of training.
+
+    Args:
+        history (dict): a dictionary containing the training history
+    """
+    
+    plt.figure(figsize=(8,6))
+    
+    #* The number of epochs correspond to those in 'history' dictionary
+    epochs = range(1, len(history['train_accuracy'] + 1))  
+    
+    plt.plot(epochs, history['train_accuracy'], 'b-', label='Training Accuracy')
+    plt.plot(epochs, history['val_accuracy'], 'r-', label='Validation Accuracy')
+    
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy (%)')
+    plt.title('Training Progress')
+    plt.legend
+    
+    plt.show()
+    
+
+def train_model(model, epochs: int, patience: int, train_loader, val_loader, save_path: Path, 
+                checkpoint_freq=5, resume_from_checkpoint: bool = False) -> tuple:
+    """
+    Given a model, this function trains it for a specific number of epochs, and it includes
     advanced techniques such as: 
         * Early stopping: stopping the training after if the validation accuracy stops improving after
                             a given number of epochs (patience)
         * Learning rate scheduling: automatically adjust the learning rate during training
-        * Hyperparameter tuning: learning rate, layer freezing & unfreezing
-        * Incremental saving
+        * Checkpoint saving
         
     Returns:
         best_model_state: a dictionary that maps each layer's name to its parameter values
@@ -272,10 +298,39 @@ def train_model(model, epochs: int, patience: int, train_loader, val_loader, sav
         print(f"Checkpoint saved at epoch {epoch + 1}")
         
     progress_bar.close()
+    
+    plot_training_history(history)
             
     return best_model_state, best_accuracy
             
-            
+#! The best accuracy is the not necessarily the final accuracy due to the patience variable   
+#! Need to add other metrics like F1 or recall       
 
+#? We could also save the training history plot
+
+def save_model_version(model, epochs, patience, checkpoint_freq, learning_rate, best_accuracy) -> None:
+    """
+    When called this function adds a log to the the MLflow database.
     
+    Args:
+        model: the model after it's been trained
+        epochs: nbre of training epochs
+        patience: patience nbre
+        checkpoint_freq: interval of epochs between checkpoints
+        learning_rate: initial learning rate
+        best_accuracy: the model's highest achieved accuracy
+        
+    """
+    
+    with mlflow.start_run():
+        mlflow.log_param('epochs', epochs)
+        mlflow.log_param('patience', patience)
+        mlflow.log_param('checkpoint_freq', checkpoint_freq)
+        mlflow.log_param("learning_rate", learning_rate)
+
+        
+        mlflow.log_metric('best_accuracy', best_accuracy)
+        
+        mlflow.pytorch.log_model(model, artifact_path='final_model_resnet50')
+        
 
