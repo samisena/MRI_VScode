@@ -105,6 +105,7 @@ def load_checkpoint(checkpoint_path: Path, model, optimizer, scheduler, device):
     Returns:
         start_epoch: the epoch that training should begin with 0 if no checkpoints were found
                     otherwise current epoch + 1
+        best_model_state: the best weights so far in training
         best_accuracy: the best recoreded accuracy so far
         no_improvement_epochs = the number of consecutive epochs where the training accuracy hasn't increased
         history: a dictionary containing the savec history of the current training process
@@ -123,12 +124,13 @@ def load_checkpoint(checkpoint_path: Path, model, optimizer, scheduler, device):
         scheduler.load_state_dict(checkpoint['scheduler_state'])
         
         start_epoch = checkpoint['epoch']+1  #* The new starting epoch
+        best_model_state = checkpoint['model_state']
         best_accuracy = checkpoint['best_accuracy']
         no_improvement_epochs = checkpoint['no_improvement_epochs']
         history =  checkpoint['history']
         
         print(f'Resuming training from epoch {start_epoch} with best accuracy {best_accuracy}')
-        return start_epoch, best_accuracy, no_improvement_epochs, history
+        return start_epoch, best_model_state, best_accuracy, no_improvement_epochs, history
     
     else:
         print('No checkpoint was found, starting training from epoch 0.')
@@ -222,7 +224,7 @@ def train_model(model, epochs: int, patience: int, train_loader, val_loader, sav
     
     # Fixed typo in 'exists()' method
     if resume_from_checkpoint and checkpoint_path.exists():    
-        start_epoch, best_accuracy, no_improvement_epochs, history = load_checkpoint(
+        start_epoch, best_model_state, best_accuracy, no_improvement_epochs, history = load_checkpoint(
             checkpoint_path, model, optimizer, scheduler, device)  # Fixed typo in 'map_location'
     else:
         start_epoch = 0                
