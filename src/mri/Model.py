@@ -190,7 +190,7 @@ def plot_training_history(history: dict):
     plt.show()
     
 
-def train_model(model, epochs: int, patience: int, train_loader, val_loader, save_path: Path, 
+def train_model(model, epochs: int, patience: int, learning_rate: float,  train_loader, val_loader, save_path: Path, 
                 checkpoint_freq=5, resume_from_checkpoint: bool = False) -> tuple:
     """
     Given a model, this function trains it for a specific number of epochs, and it includes
@@ -211,7 +211,7 @@ def train_model(model, epochs: int, patience: int, train_loader, val_loader, sav
     checkpoint_path = save_path.parent / f"{model.__class__.__name__}_checkpoint.pt"
 
     # Initialize optimizer and scheduler
-    optimizer = Adam(model.parameters(), lr=0.003)
+    optimizer = Adam(model.parameters(), lr=learning_rate)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,    
         mode='min',   
@@ -300,9 +300,7 @@ def train_model(model, epochs: int, patience: int, train_loader, val_loader, sav
         print(f"Checkpoint saved at epoch {epoch + 1}")
         
     progress_bar.close()
-    
-    plot_training_history(history)
-            
+                
     return best_model_state, best_accuracy
             
 #! The best accuracy is the not necessarily the final accuracy due to the patience variable   
