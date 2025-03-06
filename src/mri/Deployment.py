@@ -2,24 +2,30 @@ from fastapi import FastAPI, Request, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import io
+from config import Config
 
 from mri.Model import *
 
-model = Resnet50()    
-#?model.load_state_dict()
+
+#! Need to display class name alongside class index
+
+
+#* Load the model:
+model = Resnet50(num_classes=4)
+model_path = Config.MODEL_PATH
+model = torch.load(model_path, map_location=torch.device("cpu"))
 model.eval()
 
 
 app = FastAPI()
-templates = Jinja2Templates(directory='templates')
+templates = Jinja2Templates(directory=str(Config.PROJECT_ROOT / 'Templates'))
     
     
-
 @app.get("/", response_class=HTMLResponse)   #? Handles get requests at the root URL '/', and 
                                              #? sends back a HTML file as a response (browser compatible)
 async def read_root(request: Request):    #! this endpoint expects a input of the type: Request object
     
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("ui.html", {"request": request})
     #! This renders (process HTML file into a webpage) our 'index.html' file
     
     
