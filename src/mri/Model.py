@@ -20,6 +20,14 @@ class Resnet50(nn.Module):
     #* Note: it doesn't matter what how we define the instance attribute for the architecture
     #* as long as we call it in the forward method
         
+class Resnet100(nn.Module):
+    def __init__(self, num_classes):
+        super().__init__()
+        self.resnet = models.resnet100(weights=models.ResNet50_Weights.DEFAULT)
+        self.resnet.fc = nn.Linear(2048, num_classes)
+    def forward(self, x):
+        self.resnet(x)
+
 class EfficientNetB0(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
@@ -28,7 +36,14 @@ class EfficientNetB0(nn.Module):
     
     def forward(self,x):
         return self.efficientnet(x)
-
+    
+class EfficientNetB1(nn.Module):
+    def __init__(self, num_classes):
+        super().__init__()
+        self.efficienet = models.efficientnet_b1(weights=models.EfficientNet_B1_Weights.DEFAULT)
+        self.efficient.classifier = nn.Linear(1280, num_classes)
+    def forward(self, x):
+        self.efficienet(x)
 
 def train_epoch(model, train_loader, criterion, optimizer, device) -> tuple:
     """
