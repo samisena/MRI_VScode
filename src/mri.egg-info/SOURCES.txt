@@ -1,0 +1,5 @@
+setup.py
+src/mri.egg-info/PKG-INFO
+src/mri.egg-info/SOURCES.txt
+src/mri.egg-info/dependency_links.txt
+src/mri.egg-info/top_level.txt

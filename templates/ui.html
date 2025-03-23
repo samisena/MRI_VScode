@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Image Classification</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        background-color: #f7f7f7;
+        color: #333;
+      }
+      h1 {
+        text-align: center;
+      }
+      .container {
+        max-width: 500px;
+        margin: auto;
+        padding: 20px;
+        background: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+      }
+      input[type="file"] {
+        margin-bottom: 20px;
+      }
+      button {
+        padding: 10px;
+        background-color: #007bff;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Image Classification</h1>
+    <div class="container">
+      <form action="/predict" method="post" enctype="multipart/form-data">
+        <label for="file">Choose an image to upload:</label>
+        <input type="file" name="file" accept="image/*" required />
+        <button type="submit">Predict</button>
+      </form>
+    </div>
+  </body>
+</html>

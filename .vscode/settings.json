@@ -1,0 +1,7 @@
+{
+  "python.defaultInterpreterPath": "C:/ProgramData/anaconda3/envs/myvenv/python.exe",
+  "code-runner.executorMap": {
+    "python": "C:/ProgramData/anaconda3/envs/myvenv/python.exe"
+  },
+  "code-runner.runInTerminal": true
+}
