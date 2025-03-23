@@ -20,6 +20,7 @@ class Resnet50(nn.Module):
     #* Note: it doesn't matter what how we define the instance attribute for the architecture
     #* as long as we call it in the forward method
         
+<<<<<<< HEAD
 class Resnet100(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
@@ -27,6 +28,18 @@ class Resnet100(nn.Module):
         self.resnet.fc = nn.Linear(2048, num_classes)
     def forward(self, x):
         self.resnet(x)
+=======
+class Resnet101(nn.Module):
+    def __init__(self, num_classes):
+        super().__init__()
+        #self.resnet = models.resnet101(weights=models.ResNet101_Weights.DEFAULT)
+        self.resnet = models.resnet101(pretrained=True)
+
+
+        self.resnet.fc = nn.Linear(2048, num_classes)
+    def forward(self, x):
+        return self.resnet(x)
+>>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
 
 class EfficientNetB0(nn.Module):
     def __init__(self, num_classes):
@@ -40,10 +53,17 @@ class EfficientNetB0(nn.Module):
 class EfficientNetB1(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
+<<<<<<< HEAD
         self.efficienet = models.efficientnet_b1(weights=models.EfficientNet_B1_Weights.DEFAULT)
         self.efficient.classifier = nn.Linear(1280, num_classes)
     def forward(self, x):
         self.efficienet(x)
+=======
+        self.efficientnet = models.efficientnet_b1(weights=models.EfficientNet_B1_Weights.DEFAULT)
+        self.efficientnet.classifier = nn.Linear(1280, num_classes)
+    def forward(self, x):
+        return self.efficientnet(x)
+>>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
 
 def train_epoch(model, train_loader, criterion, optimizer, device) -> tuple:
     """
@@ -323,7 +343,11 @@ def train_model(model, epochs: int, patience: int, learning_rate: float,  train_
 
 #? We could also save the training history plot
 
+<<<<<<< HEAD
 def save_model_version(model, epochs, patience, checkpoint_freq, learning_rate, best_accuracy) -> None:
+=======
+def save_model_version(model, model_name, epochs, patience, checkpoint_freq, learning_rate, best_accuracy) -> None:
+>>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
     """
     When called this function adds a log to the the MLflow database.
     
@@ -336,8 +360,16 @@ def save_model_version(model, epochs, patience, checkpoint_freq, learning_rate, 
         best_accuracy: the model's highest achieved accuracy
         
     """
+<<<<<<< HEAD
     
     with mlflow.start_run():
+=======
+
+    mlflow.set_experiment("1st experiment")
+    mlflow.set_tracking_uri('https://dagshub.com/samisena/MRI_VScode.mlflow')
+    
+    with mlflow.start_run(run_name = model_name):
+>>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
         mlflow.log_param('epochs', epochs)
         mlflow.log_param('patience', patience)
         mlflow.log_param('checkpoint_freq', checkpoint_freq)
@@ -346,6 +378,21 @@ def save_model_version(model, epochs, patience, checkpoint_freq, learning_rate, 
         
         mlflow.log_metric('best_accuracy', best_accuracy)
         
+<<<<<<< HEAD
         mlflow.pytorch.log_model(model, artifact_path='final_model_resnet50')
         
+=======
+        mlflow.pytorch.log_model(model, artifact_path=f'final_model_{model_name}')
+        
+def register_model(run_id: str, model_name: str):
+    """
+    This function registers a model on gatshub for later usage
+    arguments:
+        run_id
+        model_name
+    """
+    model_uri= f"runs:/{run_id}/{model_name}"
+    registered_model = mlflow.register_model(model_uri=model_uri, name=model_name)
+    print(f"Registered model: {registered_model.name}, version: {registered_model.version}")
+>>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
 

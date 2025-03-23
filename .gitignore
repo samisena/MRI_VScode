@@ -1,0 +1,15 @@
+# Bytecode files
+__pycache__/
+*.pyc
+*.py[cod]
+
+
+*.pt
+*.pth
+
+# MLflow tracking
+mlruns/
+artifacts/
+Trained_models/
+Notebooks/mlruns/
+Data/

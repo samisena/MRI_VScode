@@ -1,3 +1,7 @@
+<<<<<<< HEAD
 Notebooks/mlruns/**/model/* filter=lfs diff=lfs merge=lfs -text
 Trained_models/Resnet50.pth filter=lfs diff=lfs merge=lfs -text
 Trained_models/Resnet50_checkpoint.pt filter=lfs diff=lfs merge=lfs -text
+=======
+
+>>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
