@@ -20,15 +20,6 @@ class Resnet50(nn.Module):
     #* Note: it doesn't matter what how we define the instance attribute for the architecture
     #* as long as we call it in the forward method
         
-<<<<<<< HEAD
-class Resnet100(nn.Module):
-    def __init__(self, num_classes):
-        super().__init__()
-        self.resnet = models.resnet100(weights=models.ResNet50_Weights.DEFAULT)
-        self.resnet.fc = nn.Linear(2048, num_classes)
-    def forward(self, x):
-        self.resnet(x)
-=======
 class Resnet101(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
@@ -39,7 +30,6 @@ class Resnet101(nn.Module):
         self.resnet.fc = nn.Linear(2048, num_classes)
     def forward(self, x):
         return self.resnet(x)
->>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
 
 class EfficientNetB0(nn.Module):
     def __init__(self, num_classes):
@@ -53,17 +43,10 @@ class EfficientNetB0(nn.Module):
 class EfficientNetB1(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
-<<<<<<< HEAD
-        self.efficienet = models.efficientnet_b1(weights=models.EfficientNet_B1_Weights.DEFAULT)
-        self.efficient.classifier = nn.Linear(1280, num_classes)
-    def forward(self, x):
-        self.efficienet(x)
-=======
         self.efficientnet = models.efficientnet_b1(weights=models.EfficientNet_B1_Weights.DEFAULT)
         self.efficientnet.classifier = nn.Linear(1280, num_classes)
     def forward(self, x):
         return self.efficientnet(x)
->>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
 
 def train_epoch(model, train_loader, criterion, optimizer, device) -> tuple:
     """
@@ -73,64 +56,68 @@ def train_epoch(model, train_loader, criterion, optimizer, device) -> tuple:
         model (torchvision.models | nn.Module): The model to train
         training_dataloader (torch.utils.data.DataLoader): the dataloader containing the training data
     """
-    model.train()        #? Putting the model in train mode
+    model.train()        # Putting the model in train mode
     running_loss = 0.0   #? Resets the running_loss for each new epoch
     correct = 0
     total = 0
     
-    for features, labels in train_loader:
+    for features, labels in train_loader:  #?Iterate over the DataLoader - batch by batch
         
-        features, labels = features.to(device), labels.to(device)
+        features, labels = features.to(device), labels.to(device) #we send the data to the 
+																  #same device as the model
         
-        optimizer.zero_grad()      
+        optimizer.zero_grad()        # re-setting the accumulated gradients (PyTorch stores 
+									 #gradients through computational graphs
         
-        predictions = model(features)
+        predictions = model(features)  # forward pass
         
-        loss = criterion(predictions, labels)
+        loss = criterion(predictions, labels)   #loss calculation: prediction relative to 
+												# the target label
         
-        loss.backward()
+        loss.backward()   # gradient descent based on the loss value
+						  # the gradients of each parameter w are stored in its .grad attribute
         
-        optimizer.step()
+        optimizer.step()   # update all weights of the neural network 
+						   # read the .grad of each parameter and applies the optimizer rule
         
-        running_loss += loss.item()
+        running_loss += loss.item() #accumulated loss of the batch
         
-        _, predicted = torch.max(predictions, 1)
+        _, predicted = torch.max(predictions, 1)  # predicted is the class with the highest score
         
         correct += (predicted==labels).sum().item()  #? counts the number of correct predictions
              
         total += labels.size(0)     #? returns the number of samples in each batch
                
-    return running_loss/len(train_loader), (correct/total)*100   #! len(train_dataloader) returns the number
-                                                        #! of batches not the number of samples in the dataset
+    return running_loss/len(train_loader), (correct/total)*100   # len(train_dataloader) returns the number
+                                                        # of batches not the number of samples in the dataset
         
         
 def validate_epoch(model, val_loader, criterion, device) -> tuple:
     model.eval()    #? de-activates special layers like dropout
-    val_loss = 0
+    val_loss = 0    #? resets these variables for each new epoch
     correct = 0
     total = 0
     
-    with torch.no_grad():    #? stops pytorch from keeping computational graphs for each tensor (weight)
-        for features, labels in val_loader:
-            features, labels = features.to(device), labels.to(device)
+    with torch.no_grad():    #? stops pytorch from tracking gradients
+        for features, labels in val_loader:   #? Iterates over the DataLoader - batch by batch
+            features, labels = features.to(device), labels.to(device)   
             
-            predictions = model(features)   #? outputs the predicted class index for each sample
-            loss = criterion(predictions, labels)   #? outputs the loss given the correct classes
+            predictions = model(features)   # outputs the predicted class index for each sample
+            loss = criterion(predictions, labels)   # outputs the loss given the correct classes
             
-            val_loss += loss.item()
+            val_loss += loss.item()     # the accumulated loss value of the curretn batch
              
-            _, predicted = torch.max(predictions, 1)   #? will return the index and the value of the 
-                                                        #? largest value along dimension 1: the rows
+            _, predicted = torch.max(predictions, 1)   # predicted class from predictions: [batch_Size, num_class]
                         
             correct += (predicted==labels).sum().item()  #? counts the number of correct predictions
+            #! (predicted==lables) creates a tuple only containing elements that match the criteria
+            #! .item() extracts the Python number x from the tensor format ([x])
              
             total += labels.size(0)     #? returns the number of samples in each batch
             
     return val_loss/len(val_loader), (correct/total)*100
         
-#! Let's add checkpoints
-#! training metric visualisations
-#! and a load trained model function
+
 
 def load_checkpoint(checkpoint_path: Path, model, optimizer, scheduler, device):
     
@@ -343,11 +330,7 @@ def train_model(model, epochs: int, patience: int, learning_rate: float,  train_
 
 #? We could also save the training history plot
 
-<<<<<<< HEAD
 def save_model_version(model, epochs, patience, checkpoint_freq, learning_rate, best_accuracy) -> None:
-=======
-def save_model_version(model, model_name, epochs, patience, checkpoint_freq, learning_rate, best_accuracy) -> None:
->>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
     """
     When called this function adds a log to the the MLflow database.
     
@@ -360,16 +343,8 @@ def save_model_version(model, model_name, epochs, patience, checkpoint_freq, lea
         best_accuracy: the model's highest achieved accuracy
         
     """
-<<<<<<< HEAD
     
     with mlflow.start_run():
-=======
-
-    mlflow.set_experiment("1st experiment")
-    mlflow.set_tracking_uri('https://dagshub.com/samisena/MRI_VScode.mlflow')
-    
-    with mlflow.start_run(run_name = model_name):
->>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
         mlflow.log_param('epochs', epochs)
         mlflow.log_param('patience', patience)
         mlflow.log_param('checkpoint_freq', checkpoint_freq)
@@ -378,10 +353,6 @@ def save_model_version(model, model_name, epochs, patience, checkpoint_freq, lea
         
         mlflow.log_metric('best_accuracy', best_accuracy)
         
-<<<<<<< HEAD
-        mlflow.pytorch.log_model(model, artifact_path='final_model_resnet50')
-        
-=======
         mlflow.pytorch.log_model(model, artifact_path=f'final_model_{model_name}')
         
 def register_model(run_id: str, model_name: str):
@@ -394,5 +365,4 @@ def register_model(run_id: str, model_name: str):
     model_uri= f"runs:/{run_id}/{model_name}"
     registered_model = mlflow.register_model(model_uri=model_uri, name=model_name)
     print(f"Registered model: {registered_model.name}, version: {registered_model.version}")
->>>>>>> 3bb79b2d5b4d879f749828b42264c4d0fe23890d
 
