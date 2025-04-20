@@ -27,6 +27,7 @@ def tensor_to_image(tensor):
     
     return img
 
+
 def guided_backprop(model, input_tensor, class_idx=None):
     """
     Performs Guided Backpropagation visualization on a PyTorch model.
@@ -122,6 +123,7 @@ def guided_backprop(model, input_tensor, class_idx=None):
     
     return rgb_gradients
 
+
 def gradcam(model, target_layer, input_tensor, class_idx=None, alpha=0.4, colormap=cv2.COLORMAP_JET):
     """
     This function computes gradcam visualizations.
@@ -214,6 +216,7 @@ def gradcam(model, target_layer, input_tensor, class_idx=None, alpha=0.4, colorm
         'original': orig_img
     }
 
+
 def guided_gradcam(model, target_layer, input_tensor, class_idx=None, use_relu=True, alpha=0.4):
     """
     Creates Guided GradCAM by combining Guided Backpropagation with GradCAM.
@@ -268,6 +271,7 @@ def guided_gradcam(model, target_layer, input_tensor, class_idx=None, use_relu=T
         'guided_backprop': guided_bp,
         'original': original_img
     }
+
 
 def visualize_guided_gradcam(model, test_loader, target_layer, class_idx=None, alpha=0.7, colormap=cv2.COLORMAP_JET):
     """
@@ -328,6 +332,7 @@ def visualize_guided_gradcam(model, test_loader, target_layer, class_idx=None, a
     
     return result
 
+
 def enhanced_guided_backprop(model, input_tensor, class_idx=None, alpha=0.6, colormap=cv2.COLORMAP_JET):
     """
     Enhanced guided backpropagation with overlay on original image and colormap
@@ -368,6 +373,7 @@ def enhanced_guided_backprop(model, input_tensor, class_idx=None, alpha=0.6, col
         'overlay': overlay,
         'original': original_img
     }
+
 
 # Enhanced version of guided_gradcam that makes gradients more colorful and visible
 def enhanced_guided_gradcam(model, target_layer, input_tensor, class_idx=None, alpha=0.7, colormap=cv2.COLORMAP_JET, 
@@ -415,3 +421,52 @@ def enhanced_guided_gradcam(model, target_layer, input_tensor, class_idx=None, a
     original_result['enhanced_overlay'] = enhanced_overlay
     
     return original_result
+
+
+def visualize_xai(model, input_tensor, target_layer):
+    
+    original_img = tensor_to_image(input_tensor)
+
+    # 2. Enhanced Guided Backpropagation with overlay
+    guided_bp_result = enhanced_guided_backprop(model, input_tensor, alpha=0.6)
+
+    # 3. GradCAM
+    gradcam_result = gradcam(model, target_layer, input_tensor)
+
+    # 4. Enhanced Guided GradCAM with more vibrant colors
+    guided_gradcam_result = enhanced_guided_gradcam(
+        model, target_layer, input_tensor,  
+        alpha=0.7, colormap=cv2.COLORMAP_JET, 
+        brightness_factor=2.5, contrast_factor=2.0
+    )
+
+    # Create a figure with all visualizations
+    plt.figure(figsize=(20, 15))
+
+    # Original image
+    plt.subplot(2, 2, 1)
+    plt.title("Original Image")
+    plt.imshow(original_img)
+    plt.axis("off")
+
+    # Enhanced Guided Backpropagation (with overlay)
+    plt.subplot(2, 2, 2)
+    plt.title("Guided Backpropagation")
+    plt.imshow(guided_bp_result['overlay'])
+    plt.axis("off")
+
+    # GradCAM
+    plt.subplot(2, 2, 3)
+    plt.title("GradCAM")
+    plt.imshow(gradcam_result['overlay'])
+    plt.axis("off")
+
+    # Enhanced Guided GradCAM
+    plt.subplot(2, 2, 4)
+    plt.title("Enhanced Guided GradCAM")
+    plt.imshow(guided_gradcam_result['enhanced_overlay'])
+    plt.axis("off")
+
+    plt.tight_layout()
+    plt.show()
+        

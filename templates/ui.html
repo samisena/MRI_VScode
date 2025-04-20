@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Image Classification</title>
+    <title>Brain MRI Classification</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -10,22 +10,39 @@
         background-color: #f7f7f7;
         color: #333;
       }
-      h1 {
+      h1,
+      h2 {
         text-align: center;
       }
       .container {
-        max-width: 500px;
+        max-width: 800px;
         margin: auto;
         padding: 20px;
         background: #fff;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
       }
-      form {
+      .upload-form {
         display: flex;
         flex-direction: column;
       }
       input[type="file"] {
         margin-bottom: 20px;
+      }
+      select {
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+      }
+      .model-selection-container {
+        margin-bottom: 20px;
+      }
+      .model-selection-container label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
       }
       button {
         padding: 10px;
@@ -38,16 +55,221 @@
       button:hover {
         background-color: #0056b3;
       }
+      #results {
+        display: none;
+        margin-top: 30px;
+      }
+      .result-card {
+        text-align: center;
+        padding: 20px;
+        background: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .prediction-result {
+        font-size: 22px;
+        font-weight: bold;
+        margin: 15px 0;
+        color: #007bff;
+      }
+      .confidence-score {
+        font-size: 18px;
+        color: #666;
+        margin-bottom: 20px;
+      }
+      .model-used {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 20px;
+        font-style: italic;
+      }
+      .visualization-container {
+        max-width: 100%;
+        margin-top: 20px;
+      }
+      .visualization-image {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      #loading {
+        display: none;
+        text-align: center;
+        margin: 20px 0;
+      }
+      .loader {
+        border: 6px solid #f3f3f3;
+        border-top: 6px solid #007bff;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 2s linear infinite;
+        margin: 0 auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .model-info {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 5px;
+        border-left: 4px solid #007bff;
+      }
+      .model-info h3 {
+        margin-top: 0;
+        color: #007bff;
+      }
+      .model-info p {
+        margin-bottom: 0;
+      }
     </style>
   </head>
   <body>
-    <h1>Image Classification</h1>
+    <h1>Brain MRI Tumor Classification</h1>
     <div class="container">
-      <form action="/predict" method="post" enctype="multipart/form-data">
-        <label for="file">Choose an image to upload:</label>
-        <input type="file" name="file" accept="image/*" required />
-        <button type="submit">Predict</button>
-      </form>
+      <div class="upload-form">
+        <label for="file">Choose a brain MRI scan to analyze:</label>
+        <input type="file" id="file" name="file" accept="image/*" required />
+
+        <div class="model-selection-container">
+          <label for="model-select">Select AI Model for Analysis:</label>
+          <select id="model-select" name="model_name">
+            <!-- Options will be populated dynamically from the server -->
+            <option value="resnet50">ResNet-50</option>
+            <option value="resnet100">ResNet-100</option>
+            <option value="efficientnetb0">EfficientNet-B0</option>
+            <option value="efficientnetb1">EfficientNet-B1</option>
+          </select>
+        </div>
+
+        <div class="model-info">
+          <h3>About the Models</h3>
+          <p id="model-description">
+            ResNet-50 is a convolutional neural network architecture that's 50
+            layers deep. It provides a good balance between accuracy and
+            computational efficiency.
+          </p>
+        </div>
+
+        <button type="button" id="predict-button">Analyze MRI Scan</button>
+      </div>
+      <div id="loading">
+        <div class="loader"></div>
+        <p>Analyzing image and generating visualizations...</p>
+      </div>
     </div>
+
+    <div id="results" class="container">
+      <h2>Analysis Results</h2>
+      <div class="result-card">
+        <div class="prediction-result" id="prediction-text">Diagnosis:</div>
+        <div class="confidence-score" id="confidence-text">Confidence:</div>
+        <div class="model-used" id="model-used-text">Model used:</div>
+      </div>
+
+      <div class="visualization-container">
+        <h3>Explainable AI Visualizations</h3>
+        <img
+          id="visualization"
+          class="visualization-image"
+          src=""
+          alt="XAI Visualizations"
+        />
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const predictButton = document.getElementById("predict-button");
+        const fileInput = document.getElementById("file");
+        const modelSelect = document.getElementById("model-select");
+        const modelDescription = document.getElementById("model-description");
+        const loadingDiv = document.getElementById("loading");
+        const resultsDiv = document.getElementById("results");
+        const predictionText = document.getElementById("prediction-text");
+        const confidenceText = document.getElementById("confidence-text");
+        const modelUsedText = document.getElementById("model-used-text");
+        const visualizationImg = document.getElementById("visualization");
+
+        // Model descriptions with correct layer information
+        const modelDescriptions = {
+          resnet50:
+            "ResNet-50 is a convolutional neural network architecture that's 50 layers deep. It provides a good balance between accuracy and computational efficiency. For visualization, we target the final convolutional layer (layer4.2.conv3) which captures the most complex, high-level features.",
+          resnet100:
+            "ResNet-100 is a deeper version of ResNet with 100 layers, offering potentially higher accuracy at the cost of increased computational requirements. For visualization, we target the final convolutional layer (layer4.2.conv3) which captures the most complex, high-level features.",
+          efficientnetb0:
+            "EfficientNet-B0 is designed for high accuracy with fewer parameters, making it more efficient while maintaining good performance. For visualization, we target the final convolutional layer (features.8.0) which captures the most important features for classification.",
+          efficientnetb1:
+            "EfficientNet-B1 is a slightly larger model than B0, offering improved accuracy with a modest increase in computational requirements. For visualization, we target the final convolutional layer (features.8.0) which captures the most important features for classification.",
+        };
+
+        // Update model description when selection changes
+        modelSelect.addEventListener("change", function () {
+          const selectedModel = modelSelect.value;
+          modelDescription.textContent =
+            modelDescriptions[selectedModel] ||
+            "Select a model to see its description.";
+        });
+
+        predictButton.addEventListener("click", async function () {
+          // Check if a file is selected
+          if (!fileInput.files || fileInput.files.length === 0) {
+            alert("Please select an image file first");
+            return;
+          }
+
+          // Create FormData object
+          const formData = new FormData();
+          formData.append("file", fileInput.files[0]);
+          formData.append("model_name", modelSelect.value);
+
+          // Show loading indicator and hide results
+          loadingDiv.style.display = "block";
+          resultsDiv.style.display = "none";
+
+          try {
+            // Make the fetch request
+            const response = await fetch("/predict", {
+              method: "POST",
+              body: formData,
+            });
+
+            // Parse the JSON response
+            const result = await response.json();
+
+            // Check for errors
+            if (result.error) {
+              alert("Error: " + result.error);
+              return;
+            }
+
+            // Update the results
+            predictionText.textContent = "Diagnosis: " + result.prediction_name;
+            confidenceText.textContent = "Confidence: " + result.confidence;
+            modelUsedText.textContent = "Model used: " + result.model_used;
+
+            // Set the image source with the proper data URL format
+            visualizationImg.src =
+              "data:image/png;base64," + result.visualization;
+
+            // Show the results
+            resultsDiv.style.display = "block";
+          } catch (error) {
+            alert("Error analyzing the image: " + error.message);
+          } finally {
+            // Hide loading indicator
+            loadingDiv.style.display = "none";
+          }
+        });
+      });
+    </script>
   </body>
 </html>

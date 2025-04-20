@@ -7,6 +7,9 @@ from config import Config
 from mri.Model import *
 
 
+#! REST API: representational state transfer application programming interface
+#? It's a method for softwares to communicate over the internet using HTTP methods.
+
 #! Need to display class name alongside class index
 
 
