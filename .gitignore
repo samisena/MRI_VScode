@@ -16,3 +16,7 @@ Notebooks/mlruns/
 # Ignore data files but allow DVC tracking files
 Data/**
 !Data/*.dvc
+!Data/*/*.dvc
+!Data/*/*/*.dvc
+
+/test.txt
