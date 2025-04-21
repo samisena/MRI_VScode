@@ -12,4 +12,7 @@ mlruns/
 artifacts/
 Trained_models/
 Notebooks/mlruns/
-Data/
+
+# Don't track data excpet dvc cache files
+Data/**
+!Data/*.dvc  
