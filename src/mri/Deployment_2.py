@@ -10,6 +10,7 @@ from config import Config
 import mlflow
 import os
 
+
 # Import your existing model and XAI functions
 from mri.ExplainableAI import *      
 
@@ -18,7 +19,7 @@ mlflow.set_tracking_uri("https://dagshub.com/samisena/MRI_VScode.mlflow")
 
 # Set your DagsHub credentials
 os.environ['MLFLOW_TRACKING_USERNAME'] = 'samisena'
-os.environ['MLFLOW_TRACKING_PASSWORD'] = 'cb6584b07822e49dbde524fb92b0376756fcfdfd'
+os.environ['MLFLOW_TRACKING_PASSWORD'] = 'd95798f0a5c4723a8ec0e4c2ed3fdeed5755e9a8'
 
 # Model mapping dictionary with the CORRECT target layers
 MODEL_CONFIG = {
@@ -153,6 +154,9 @@ def visualize_xai_web(model, input_tensor, target_layer):
     
     # Return the base64 encoded image
     return img_str
+
+
+
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MRI Model Monitoring Dashboard</title>
+    <!-- Import Chart.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f7fa;
+        color: #333;
+      }
+      .dashboard-container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1,
+      h2,
+      h3 {
+        color: #2c3e50;
+        text-align: center;
+      }
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+      .metric-card {
+        background-color: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      }
+      .metric-value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #3498db;
+        text-align: center;
+        margin: 10px 0;
+      }
+      .metric-label {
+        text-align: center;
+        color: #7f8c8d;
+        font-size: 14px;
+      }
+      .chart-container {
+        background-color: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+        height: 300px;
+      }
+      .button {
+        padding: 10px 15px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-bottom: 20px;
+      }
+      .button:hover {
+        background-color: #2980b9;
+      }
+      .error-list {
+        background-color: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+      }
+      .error-item {
+        padding: 10px;
+        margin-bottom: 5px;
+        background-color: #ffecec;
+        border-left: 4px solid #e74c3c;
+        border-radius: 4px;
+      }
+      .back-link {
+        display: inline-block;
+        margin-bottom: 20px;
+        color: #3498db;
+        text-decoration: none;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <a href="/" class="back-link">← Back to MRI Analysis</a>
+
+      <h1>MRI Classification Model Monitoring</h1>
+
+      <div class="metrics-grid">
+        <!-- Basic metrics cards -->
+        <div class="metric-card">
+          <div class="metric-label">Total Requests</div>
+          <div class="metric-value" id="total-requests">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Average Latency</div>
+          <div class="metric-value" id="avg-latency">0 ms</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Error Rate</div>
+          <div class="metric-value" id="error-rate">0%</div>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <h3>Class Distribution</h3>
+        <canvas id="class-distribution-chart"></canvas>
+      </div>
+
+      <div class="chart-container">
+        <h3>Model Performance</h3>
+        <canvas id="confidence-chart"></canvas>
+      </div>
+
+      <div class="error-list">
+        <h3>Recent Errors</h3>
+        <div id="recent-errors">No errors recorded yet.</div>
+      </div>
+
+      <button class="button" onclick="refreshData()">Refresh Data</button>
+    </div>
+
+    <script>
+      // Initialize charts
+      const classDistributionCtx = document
+        .getElementById("class-distribution-chart")
+        .getContext("2d");
+      const classDistributionChart = new Chart(classDistributionCtx, {
+        type: "pie",
+        data: {
+          labels: ["Healthy", "Glioma", "Meningioma", "Pituitary"],
+          datasets: [
+            {
+              data: [0, 0, 0, 0],
+              backgroundColor: [
+                "rgba(52, 152, 219, 0.7)", // Blue
+                "rgba(231, 76, 60, 0.7)", // Red
+                "rgba(46, 204, 113, 0.7)", // Green
+                "rgba(155, 89, 182, 0.7)", // Purple
+              ],
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+        },
+      });
+
+      const confidenceCtx = document
+        .getElementById("confidence-chart")
+        .getContext("2d");
+      const confidenceChart = new Chart(confidenceCtx, {
+        type: "bar",
+        data: {
+          labels: ["ResNet50", "ResNet100", "EfficientNetB0", "EfficientNetB1"],
+          datasets: [
+            {
+              label: "Average Confidence (%)",
+              data: [0, 0, 0, 0],
+              backgroundColor: "rgba(52, 152, 219, 0.7)",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+            },
+          },
+        },
+      });
+
+      // Function to fetch monitoring data
+      async function refreshData() {
+        try {
+          const response = await fetch("/api/monitoring");
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log("Received monitoring data:", data);
+
+          // Update metrics
+          let totalRequests = 0;
+          let totalErrors = 0;
+          let totalLatency = 0;
+          let latencyCount = 0;
+          let modelConfidences = {
+            resnet50: 0,
+            resnet100: 0,
+            efficientnetb0: 0,
+            efficientnetb1: 0,
+          };
+
+          // Process data for all models
+          for (const model in data.request_counts) {
+            totalRequests += data.request_counts[model];
+            totalErrors += data.error_counts[model] || 0;
+
+            if (data.avg_latency && data.avg_latency[model]) {
+              totalLatency += data.avg_latency[model];
+              latencyCount++;
+            }
+
+            if (data.avg_confidence && data.avg_confidence[model]) {
+              modelConfidences[model] = data.avg_confidence[model];
+            }
+          }
+
+          // Update UI elements
+          document.getElementById("total-requests").textContent = totalRequests;
+          document.getElementById("avg-latency").textContent =
+            latencyCount > 0
+              ? `${(totalLatency / latencyCount).toFixed(2)} ms`
+              : "0 ms";
+          document.getElementById("error-rate").textContent =
+            totalRequests > 0
+              ? `${((totalErrors / totalRequests) * 100).toFixed(2)}%`
+              : "0%";
+
+          // Update class distribution chart
+          // For simplicity, we'll just use the first model's class distribution
+          const firstModel = Object.keys(data.class_counts)[0];
+          if (firstModel && data.class_counts[firstModel]) {
+            const classData = [
+              data.class_counts[firstModel][3] || 0, // Healthy
+              data.class_counts[firstModel][0] || 0, // Glioma
+              data.class_counts[firstModel][1] || 0, // Meningioma
+              data.class_counts[firstModel][2] || 0, // Pituitary
+            ];
+
+            classDistributionChart.data.datasets[0].data = classData;
+            classDistributionChart.update();
+          }
+
+          // Update confidence chart
+          confidenceChart.data.datasets[0].data = [
+            modelConfidences["resnet50"] || 0,
+            modelConfidences["resnet100"] || 0,
+            modelConfidences["efficientnetb0"] || 0,
+            modelConfidences["efficientnetb1"] || 0,
+          ];
+          confidenceChart.update();
+
+          // Update recent errors list
+          const errorsContainer = document.getElementById("recent-errors");
+          if (data.recent_errors) {
+            let errorHTML = "";
+            let hasErrors = false;
+
+            for (const model in data.recent_errors) {
+              const errors = data.recent_errors[model];
+              if (errors && errors.length > 0) {
+                hasErrors = true;
+                for (const error of errors) {
+                  errorHTML += `<div class="error-item">
+                                    <strong>Model:</strong> ${model} <br>
+                                    <strong>Error:</strong> ${error.error} <br>
+                                    <strong>Time:</strong> ${new Date(
+                                      error.timestamp
+                                    ).toLocaleString()}
+                                </div>`;
+                }
+              }
+            }
+
+            if (hasErrors) {
+              errorsContainer.innerHTML = errorHTML;
+            } else {
+              errorsContainer.innerHTML = "No errors recorded yet.";
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching monitoring data:", error);
+          alert(
+            "Failed to fetch monitoring data. Check the console for details."
+          );
+        }
+      }
+
+      // Load data initially and set up auto-refresh
+      document.addEventListener("DOMContentLoaded", function () {
+        refreshData();
+        setInterval(refreshData, 30000); // Refresh every 30 seconds
+      });
+    </script>
+  </body>
+</html>
