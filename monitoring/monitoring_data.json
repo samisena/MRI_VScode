@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-04-23T18:36:51.503034",
+  "timestamp": "2025-04-24T18:30:48.205233",
   "class_counts": {
     "resnet50": {
       "3": 1,
@@ -16,7 +16,7 @@
     "efficientnetb0": {
       "3": 0,
       "0": 0,
-      "1": 0,
+      "1": 1,
       "2": 1
     },
     "efficientnetb1": {
@@ -29,16 +29,19 @@
   "request_counts": {
     "resnet50": 2,
     "resnet100": 1,
-    "efficientnetb0": 1,
+    "efficientnetb0": 2,
     "efficientnetb1": 0
   },
   "error_counts": {
-    "resnet50": 0
+    "resnet50": 0,
+    "efficientnetb0": 0
   },
   "avg_latency": {
-    "resnet50": 46699.63097572327
+    "resnet50": 46699.63097572327,
+    "efficientnetb0": 10050.499439239502
   },
   "avg_confidence": {
-    "resnet50": 99.99719858169556
+    "resnet50": 99.99719858169556,
+    "efficientnetb0": 99.99563694000244
   }
 }

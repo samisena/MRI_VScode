@@ -1,12 +1,5 @@
 from mri.Preprocessing import *
-import torch.nn as nn
-import torchvision
-import torchvision.models as models
-from torch.optim import Adam
-from tqdm import tqdm
-import matplotlib.pyplot as plt 
-import mlflow
-import mlflow.pytorch  #? MLflow's doesn't automatically import all submodules 
+
 
 class Resnet50(nn.Module):
     def __init__(self, num_classes):
@@ -185,7 +178,6 @@ def get_save_path(model) -> Path:
     save_path = save_dir /f"{model_path}.pth" 
     
     return save_path
-    #? c:/Users/samis/OneDrive/Bureau/MRI_VScode/Trained_model/Resnet50.pth
     
 
 def plot_training_history(history: dict):
@@ -325,11 +317,7 @@ def train_model(model, epochs: int, patience: int, learning_rate: float,  train_
                 
     return best_model_state, best_accuracy
             
-#! The best accuracy is the not necessarily the final accuracy due to the patience variable   
-#! Need to add other metrics like F1 or recall       
-
-#? We could also save the training history plot
-
+  
 def save_model_version(model, epochs, patience, checkpoint_freq, learning_rate, best_accuracy) -> None:
     """
     When called this function adds a log to the the MLflow database.
